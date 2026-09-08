@@ -1,7 +1,16 @@
-[README.md](https://github.com/user-attachments/files/31954644/README.md)
+[PiProject README.md](https://github.com/user-attachments/files/31954758/PiProject.README.md)
+
 # PiProject
 
-## About This Project  **PiProject** is an open-source Python project created by **zomop** on **September 8, 2026**.  The project was created to explore high-precision computation of **π (pi)** using Python and **GMPY2**, with techniques such as the **Chudnovsky algorithm** and **binary splitting**.  The project also includes a verification tool for comparing calculated digits against a reference. It has successfully verified **10,000,001 digits** with **0 mismatches**.  This project is open source and available for anyone to study, modify, improve, and contribute to. If you find an issue or have an idea for improvement, feel free to open an issue or submit a pull request.  ### Author  **zomop** Created: **September 8, 2026**  ### License  This project is intended to be released as open source. A dedicated open-source license should be included in the repository to clearly define how others may use, modify, and distribute the code.
+## About This Project
+
+**PiProject** is an open-source Python project created by **zomop** on **September 8, 2026**.
+
+The project focuses on high-precision computation of **π (pi)** using **Python** and **GMPY2**, with techniques such as the **Chudnovsky algorithm** and **binary splitting**.
+
+PiProject also includes a verification tool for comparing calculated digits against a reference. The project has successfully calculated and verified **10,000,000 digits of π**, with **0 mismatches**.
+
+This project is open source and available for anyone to study, modify, improve, and contribute to.
 
 ## Table of Contents
 
@@ -15,59 +24,140 @@
 
 ## Features
 
-- Feature 1
-- Feature 2
-- Feature 3
+- High-precision calculation of π
+- Chudnovsky algorithm
+- Binary splitting
+- GMPY2 arbitrary-precision arithmetic
+- Calculation of millions of digits
+- Digit-by-digit verification
+- Reference comparison
+- Automatic output to a `.txt` file
+- Open-source and free to modify
 
 ### Tech Stack
 
-- **python**
+- **Python 3**
+- **GMPY2**
+- **Chudnovsky Algorithm**
+- **Binary Splitting**
 
 ## Installation
 
+Clone the repository:
+
 ```bash
-git clone https://github.com/andre/piproject.git
-cd piproject
-npm install PipProject
+git clone https://github.com/zomop/PiProject.git
+cd PiProject
+```
+
+Install the required Python dependency:
+
+```bash
+pip install -r requirements.txt
 ```
 
 ## Usage
 
+Run the latest π calculator:
+
 ```bash
-npm start
+python pi_project_v4.py
 ```
 
-Describe how to use the project here.
+The program calculates π using the Chudnovsky algorithm and saves the result to a text file.
+
+To verify the calculated result:
+
+```bash
+python verify.py
+```
+
+The verification tool compares the calculated digits against a reference and reports the number of matched and mismatched digits.
+
+### Example
+
+```text
+3.14159265358979323846264338327950288419716939937510582097494459230781...
+```
+
+### Verification Result
+
+```text
+==============================
+VERIFICATION
+==============================
+Calculated : 10,000,001
+Reference  : 10,000,001
+Matched    : 10,000,001
+Mismatched : 0
+
+Verification time: 0.0474 seconds
+
+✅ VERIFIED!
+```
+
+The result contains **10,000,000 characters** including the `3` before the decimal point.
 
 ## Contributing
 
 Contributions are welcome! Please follow these steps:
 
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
+2. Create your feature branch:
+
+```bash
+git checkout -b feature/amazing-feature
+```
+
+3. Commit your changes:
+
+```bash
+git commit -m "Add amazing feature"
+```
+
+4. Push to the branch:
+
+```bash
+git push origin feature/amazing-feature
+```
+
 5. Open a Pull Request
+
+You can contribute by improving calculation performance, reducing memory usage, improving verification, adding features, or improving documentation.
 
 ## FAQ
 
-#### Question 1
+#### How many digits can PiProject calculate?
 
-Answer 1
+PiProject has been tested successfully with **10,000,000 digits of π**.
 
-#### Question 2
+#### How is π calculated?
 
-Answer 2
+The project uses the **Chudnovsky algorithm** combined with **binary splitting** and GMPY2 for high-precision arithmetic.
+
+#### Is the 10-million-digit result verified?
+
+Yes. The calculated result was compared against a reference with **10,000,000 characters**, resulting in **10,000,000 matches and 0 mismatches**.
+
+#### Can I modify the project?
+
+Yes. PiProject is open source and can be studied, modified, and improved according to the repository's license.
 
 ## Acknowledgments
 
-- [Resource 1](https://example.com)
-- [Resource 2](https://example.com)
+- **GMPY2** — High-performance arbitrary-precision arithmetic
+- **Chudnovsky Brothers** — Chudnovsky algorithm for calculating π
+- **Python** — Programming language used for the project
+- Reference data used for verification
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is open source.
+
+A license file should be included in the repository to define the permissions for using, modifying, and distributing the code.
 
 ---
 
-Made with ❤ by [andre](https://github.com/andre)
+Made with ❤️ by **[zomop](https://github.com/zomop)**
+
+**September 8, 2026**
