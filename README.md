@@ -86,9 +86,9 @@ The verification tool compares the calculated digits against a reference and rep
 ==============================
 VERIFICATION
 ==============================
-Calculated : 10,000,001
-Reference  : 10,000,001
-Matched    : 10,000,001
+Calculated : 10,000,000
+Reference  : 10,000,000
+Matched    : 10,000,000
 Mismatched : 0
 
 Verification time: 0.0474 seconds
