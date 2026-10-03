@@ -1,3 +1,4 @@
+import argparse
 import urllib.request
 import urllib.error
 import time
@@ -477,7 +478,27 @@ def verify_full(
 # Main
 # ============================================================
 
+def parse_args():
+
+    parser = argparse.ArgumentParser(
+        description="Compare a calculated pi file with a reference file."
+    )
+    parser.add_argument(
+        "--calculated",
+        default=CALCULATED_FILE,
+        help=f"calculated file to verify (default: {CALCULATED_FILE})",
+    )
+    parser.add_argument(
+        "--reference",
+        help="use an existing reference file instead of downloading one",
+    )
+    return parser.parse_args()
+
+
 def main():
+
+    args = parse_args()
+    calculated_file = args.calculated
 
     print("=" * 60)
     print("               PiProject v4")
@@ -489,7 +510,7 @@ def main():
     # --------------------------------------------------------
 
     if not Path(
-        CALCULATED_FILE
+        calculated_file
     ).exists():
 
         print(
@@ -497,13 +518,13 @@ def main():
         )
 
         print(
-            CALCULATED_FILE
+            calculated_file
         )
 
         return
 
     calculated_size = Path(
-        CALCULATED_FILE
+        calculated_file
     ).stat().st_size
 
     print(
@@ -515,7 +536,14 @@ def main():
     # Download reference
     # --------------------------------------------------------
 
-    reference_file = download_reference()
+    if args.reference:
+        reference_file = args.reference
+        if not Path(reference_file).exists():
+            print(f"\n❌ Reference file tidak ditemukan: {reference_file}")
+            return
+        print(f"\nUsing local reference: {reference_file}")
+    else:
+        reference_file = download_reference()
 
     if reference_file is None:
 
@@ -534,7 +562,7 @@ def main():
     # --------------------------------------------------------
 
     verify_full(
-        CALCULATED_FILE,
+        calculated_file,
         reference_file
     )
 
