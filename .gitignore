@@ -7,8 +7,21 @@ env/
 *.log
 *.tmp
 
-# Generated pi output (can be tens of MB) — do not commit.
-pi_*.txt
-
-# Downloaded reference file (10 MB) — do not commit.
+# Generated pi output — do not commit.
+/pi_*.txt
 reference_pi.txt
+
+# Build artifacts
+/build/
+/dist/
+/*.egg-info/
+/src/*.egg-info/
+
+# Benchmark outputs
+/benchmarks/*.json
+
+# Local development
+.env
+.pytest_cache/
+.coverage
+htmlcov/

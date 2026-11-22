@@ -1,0 +1,18 @@
+{
+  "filename": "pi_1000_reference.txt",
+  "description": "First 1,000 decimal digits of pi (after the decimal point), including the integer part '3' and decimal point.",
+  "digit_count": 1000,
+  "file_size_bytes": 1002,
+  "format": "3.<1000 fractional digits> (ASCII, no trailing newline)",
+  "sha256": "823a2e34f63c5d5f30a27733976df5a1ab57feaab505f40d95d3dd3fefa425cc",
+  "source": "Independent decimal/Machin computation cross-checked against published reference",
+  "source_details": [
+    "Computed independently using Python decimal module with Machin-like formula: pi/4 = 4*atan(1/5) - atan(1/239)",
+    "Cross-checked against the first 1,000 digits published at https://www.piday.org/million/",
+    "Algorithmically and technologically independent of the Chudnovsky/binary-splitting computation engine"
+  ],
+  "retrieval_date": "2026-11-22",
+  "verification_method": "Digit-by-digit comparison against independent decimal/Machin computation; SHA-256 fingerprint recorded for integrity",
+  "usage": "Committed reference fixture used by CI to verify the computation engine produces correct output. CI verifies this file's SHA-256 before use and fails if it does not match.",
+  "notes": "This fixture covers only the first 1,000 digits. It is sufficient for prefix verification and CI smoke tests, but not for full verification of larger digit counts."
+}
