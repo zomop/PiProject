@@ -1,9 +1,20 @@
 from decimal import Decimal, getcontext
 import time
+import sys
+
+
+# =========================
+# PiProject v1 (legacy)
+# Arctan (Machin-like) formula
+# =========================
+
+# Legacy implementation: simple, dependency-free, but O(digits^2).
+# Recommended only for small digit counts. Use pi_project_v4.py for
+# large calculations (Chudnovsky + binary splitting + GMPY2).
 
 
 def calculate_pi(digits):
-    # Extra precision untuk mencegah error di digit terakhir
+    # Extra precision to avoid error in the last digits.
     getcontext().prec = digits + 20
 
     start = time.perf_counter()
@@ -39,56 +50,64 @@ def calculate_pi(digits):
 
     elapsed = time.perf_counter() - start
 
-    # Tepat jumlah digit yang diminta
+    # Exactly the requested number of digits.
     pi = format(pi, f".{digits}f")
 
     return pi, elapsed
 
 
+def main(argv=None):
+
+    print("=== PiProject ===")
+    print("Real π Calculator\n")
+
+    try:
+        digits = int(input("How many digits of pi? "))
+
+        if digits <= 0:
+            raise ValueError("Number of digits must be greater than 0.")
+
+    except ValueError:
+        print("Invalid input.")
+        return 1
+    except EOFError:
+        print("Input stream closed.")
+        return 1
+
+    print("\nCalculating...")
+    print("Please wait...\n")
+
+    pi, elapsed = calculate_pi(digits)
+
+    # =========================
+    # Save result
+    # =========================
+
+    filename = f"pi_{digits}.txt"
+
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write(pi)
+
+    # =========================
+    # Result
+    # =========================
+
+    print("π =")
+    print(pi)
+
+    print("\n=========================")
+    print(f"Time  : {elapsed:.4f} seconds")
+    print(f"Digits: {digits:,}")
+    print(f"Speed : {digits / elapsed:,.0f} digits/sec")
+    print(f"Saved : {filename}")
+    print("=========================")
+
+    return 0
+
+
 # =========================
-# PiProject
+# Start
 # =========================
 
-print("=== PiProject ===")
-print("Real π Calculator\n")
-
-try:
-    digits = int(input("Berapa digit π? "))
-
-    if digits <= 0:
-        raise ValueError("Jumlah digit harus lebih dari 0.")
-
-except ValueError:
-    print("Input tidak valid.")
-    exit()
-
-
-print("\nCalculating...")
-print("Mohon tunggu...\n")
-
-pi, elapsed = calculate_pi(digits)
-
-
-# =========================
-# Simpan hasil
-# =========================
-
-filename = f"pi_{digits}.txt"
-
-with open(filename, "w", encoding="utf-8") as f:
-    f.write(pi)
-
-
-# =========================
-# Hasil
-# =========================
-
-print("π =")
-print(pi)
-
-print("\n=========================")
-print(f"Time  : {elapsed:.4f} seconds")
-print(f"Digits: {digits:,}")
-print(f"Speed : {digits / elapsed:,.0f} digits/sec")
-print(f"Saved : {filename}")
-print("=========================")
+if __name__ == "__main__":
+    sys.exit(main())

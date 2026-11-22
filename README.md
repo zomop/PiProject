@@ -58,21 +58,40 @@ pip install -r requirements.txt
 
 ## Usage
 
-Run the latest π calculator:
+### Recommended calculator: `pi_project_v4.py`
+
+Run the latest π calculator (Chudnovsky + binary splitting + GMPY2):
 
 ```bash
 python pi_project_v4.py
 ```
 
-The program calculates π using the Chudnovsky algorithm and saves the result to a text file.
+The program prompts for the number of digits, calculates π, verifies it, and saves the result to `pi_<digits>.txt`.
 
-To verify the calculated result:
+Non-interactive mode (useful for scripting and CI):
+
+```bash
+python pi_project_v4.py --digits 1000 --output pi_1000.txt
+```
+
+Options:
+
+- `--digits N`   number of decimal digits of π to calculate
+- `--output FILE`  output file (default: `pi_<digits>.txt`)
+
+### Verification
+
+To verify a calculated result against a reference:
 
 ```bash
 python verify.py
 ```
 
-The verification tool compares the calculated digits against a reference and reports the number of matched and mismatched digits.
+This downloads a 10,000,000-digit reference and compares it to `pi_10000000.txt`. Use `--reference` to supply a local reference file instead, and `--sha256` to validate the reference's integrity. The expected SHA-256 must be established from a trusted source.
+
+```bash
+python verify.py --calculated pi_1000.txt --reference tests/fixtures/pi_1000_reference.txt --sha256 <expected>
+```
 
 ### Example
 
@@ -97,6 +116,18 @@ Verification time: 0.0474 seconds
 ```
 
 The result contains **10,000,000 characters** including the `3` before the decimal point.
+
+## Calculators compared
+
+PiProject ships three implementations. Use `pi_project_v4.py` unless you have a specific reason not to.
+
+| File | Algorithm | Dependencies | Best for | Notes |
+|------|-----------|--------------|----------|-------|
+| `pi_project_v4.py` | Chudnovsky + binary splitting | `gmpy2` | **Recommended**, millions of digits | Fastest, lowest memory at scale. Used by CI. |
+| `pi_v3.py` | Chudnovsky + binary splitting | Python stdlib (`decimal`) | Medium digit counts | Pure Python; no external deps but much slower and heavier RAM than v4 at scale. |
+| `pie.py` | Machin-like arctan | Python stdlib (`decimal`) | Small digit counts only | Legacy, O(digits²). Impractical beyond a few thousand digits. |
+
+`pi_v3.py` and `pie.py` are kept for reference and are not covered by the CI performance path.
 
 ## Contributing
 
