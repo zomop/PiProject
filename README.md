@@ -1,74 +1,94 @@
-[PiProject README.md](https://github.com/user-attachments/files/31954758/PiProject.README.md)
+<p align="center">
+  <img src="assets/pi-random-walk.svg" alt="Pi random walk — first 3,000 digits" width="640"/>
+</p>
+
+<p align="center">
+  <a href="https://github.com/zomop/PiProject/actions/workflows/ci.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/zomop/PiProject/ci.yml?branch=main&label=CI" alt="CI status"/>
+  </a>
+  <a href="https://github.com/zomop/PiProject">
+    <img src="https://img.shields.io/badge/python-3.11%2B-blue?logo=python" alt="Python 3.11+"/>
+  </a>
+  <img src="https://img.shields.io/badge/gmpy2-2.3.2-green" alt="gmpy2 2.3.2"/>
+  <img src="https://img.shields.io/badge/digits-10M%2B%20verified-purple?logo=calculator" alt="10M+ digits verified"/>
+</p>
+
+<p align="center">
+  <b>High-precision π computation in Python</b> · Chudnovsky algorithm · Binary splitting · GMPY2
+</p>
+
+---
 
 # PiProject
 
-## About This Project
+**PiProject** is an open-source Python project for computing **π (pi)** to millions of digits with the
+**Chudnovsky algorithm** and **binary splitting**, powered by **GMPY2** arbitrary-precision arithmetic.
+It also verifies calculated digits against a reference. The project has calculated and verified
+**10,000,000 digits of π with 0 mismatches**.
 
-**PiProject** is an open-source Python project created by **zomop** on **September 8, 2026**.
+## The math
 
-The project focuses on high-precision computation of **π (pi)** using **Python** and **GMPY2**, with techniques such as the **Chudnovsky algorithm** and **binary splitting**.
+PiProject uses the [Chudnovsky algorithm](https://en.wikipedia.org/wiki/Chudnovsky_algorithm),
+one of the fastest known methods for computing π:
 
-PiProject also includes a verification tool for comparing calculated digits against a reference. The project has successfully calculated and verified **10,000,000 digits of π**, with **0 mismatches**.
+```math
+\frac{1}{\pi} =
+12 \sum_{k=0}^{\infty}
+\frac{(-1)^k (6k)! \left(545140134k + 13591409\right)}
+{(3k)! (k!)^3 \left(640320\right)^{3k + 3/2}}
+```
 
-This project is open source and available for anyone to study, modify, improve, and contribute to.
+Equivalently,
 
-## Table of Contents
+```math
+\pi = \frac{426880 \sqrt{10005} \, Q}{T}
+```
 
-- [Features](#features)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Contributing](#contributing)
-- [FAQ](#faq)
-- [Acknowledgments](#acknowledgments)
-- [License](#license)
+where `P`, `Q`, `T` come from [binary splitting](https://en.wikipedia.org/wiki/Binary_splitting)
+over the Chudnovsky series — each term yields roughly **14 correct digits**.
+
+```mermaid
+flowchart TD
+    A[Input: digit count] --> B[Chudnovsky binary splitting]
+    B --> C[Compute P, Q, T integers]
+    C --> D[Integer square root of 10005]
+    D --> E[Assemble pi = 426880·sqrt(10005)·Q / T]
+    E --> F[Format digits & guard-digit trim]
+    F --> G[Verify against known pi digits]
+    G --> H[Save pi_N.txt]
+    style A fill:#e2e8f0,stroke:#334155
+    style H fill:#10b981,stroke:#047857,color:#fff
+```
 
 ## Features
 
-- High-precision calculation of π
-- Chudnovsky algorithm
-- Binary splitting
-- GMPY2 arbitrary-precision arithmetic
-- Calculation of millions of digits
-- Digit-by-digit verification
-- Reference comparison
-- Automatic output to a `.txt` file
-- Open-source and free to modify
-
-### Tech Stack
-
-- **Python 3**
-- **GMPY2**
-- **Chudnovsky Algorithm**
-- **Binary Splitting**
+- 🎯 High-precision calculation of π (millions of digits)
+- ⚡ Chudnovsky algorithm + binary splitting
+- 🔢 GMPY2 arbitrary-precision integer arithmetic
+- 🔍 Digit-by-digit reference verification
+- 📄 Automatic output to `pi_<digits>.txt`
+- 🧪 Tested & verified (47 tests, CI on every push)
 
 ## Installation
-
-Clone the repository:
 
 ```bash
 git clone https://github.com/zomop/PiProject.git
 cd PiProject
-```
-
-Install the required Python dependency:
-
-```bash
 pip install -r requirements.txt
 ```
 
 ## Usage
 
-### Recommended calculator: `pi_project_v4.py`
+<details>
+<summary><b>▶ Recommended calculator: <code>pi_project_v4.py</code></b> (click to expand)</summary>
 
-Run the latest π calculator (Chudnovsky + binary splitting + GMPY2):
+Run interactively:
 
 ```bash
 python pi_project_v4.py
 ```
 
-The program prompts for the number of digits, calculates π, verifies it, and saves the result to `pi_<digits>.txt`.
-
-Non-interactive mode (useful for scripting and CI):
+Or non-interactively (handy for scripting and CI):
 
 ```bash
 python pi_project_v4.py --digits 1000 --output pi_1000.txt
@@ -76,46 +96,37 @@ python pi_project_v4.py --digits 1000 --output pi_1000.txt
 
 Options:
 
-- `--digits N`   number of decimal digits of π to calculate
-- `--output FILE`  output file (default: `pi_<digits>.txt`)
+| Option | Meaning |
+|--------|---------|
+| `--digits N` | number of decimal digits of π to calculate |
+| `--output FILE` | output file (default: `pi_<digits>.txt`) |
 
-### Verification
+</details>
 
-To verify a calculated result against a reference:
+<details>
+<summary><b>🔎 Verify against a reference</b> (click to expand)</summary>
 
 ```bash
 python verify.py
 ```
 
-This downloads a 10,000,000-digit reference and compares it to `pi_10000000.txt`. Use `--reference` to supply a local reference file instead, and `--sha256` to validate the reference's integrity. The expected SHA-256 must be established from a trusted source.
+This compares `pi_10000000.txt` against a downloaded 10,000,000-digit reference. Use a local file instead:
 
 ```bash
-python verify.py --calculated pi_1000.txt --reference tests/fixtures/pi_1000_reference.txt --sha256 <expected>
+python verify.py --calculated pi_1000.txt \
+  --reference tests/fixtures/pi_1000_reference.txt \
+  --sha256 <expected>
 ```
 
-### Example
+The expected SHA-256 must be established from a trusted source — it is not hard-coded.
+
+</details>
+
+**Example output**
 
 ```text
 3.14159265358979323846264338327950288419716939937510582097494459230781...
 ```
-
-### Verification Result
-
-```text
-==============================
-VERIFICATION
-==============================
-Calculated : 10,000,000
-Reference  : 10,000,000
-Matched    : 10,000,000
-Mismatched : 0
-
-Verification time: 0.0474 seconds
-
-✅ VERIFIED!
-```
-
-The result contains **10,000,000 characters** including the `3` before the decimal point.
 
 ## Calculators compared
 
@@ -124,55 +135,64 @@ PiProject ships three implementations. Use `pi_project_v4.py` unless you have a 
 | File | Algorithm | Dependencies | Best for | Notes |
 |------|-----------|--------------|----------|-------|
 | `pi_project_v4.py` | Chudnovsky + binary splitting | `gmpy2` | **Recommended**, millions of digits | Fastest, lowest memory at scale. Used by CI. |
-| `pi_v3.py` | Chudnovsky + binary splitting | Python stdlib (`decimal`) | Medium digit counts | Pure Python; no external deps but much slower and heavier RAM than v4 at scale. |
+| `pi_v3.py` | Chudnovsky + binary splitting | Python stdlib (`decimal`) | Medium digit counts | Pure Python, no external deps, but slower at scale. |
 | `pie.py` | Machin-like arctan | Python stdlib (`decimal`) | Small digit counts only | Legacy, O(digits²). Impractical beyond a few thousand digits. |
-
-`pi_v3.py` and `pie.py` are kept for reference and are not covered by the CI performance path.
 
 ## Contributing
 
-Contributions are welcome! Please follow these steps:
+<details>
+<summary><b>👉 How to contribute</b> (click to expand)</summary>
 
-1. Fork the repository
-2. Create your feature branch:
+1. Fork the repository.
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Commit your changes: `git commit -m "Add amazing feature"`
+4. Push to the branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request.
 
-```bash
-git checkout -b feature/amazing-feature
-```
+You can contribute by improving calculation performance, reducing memory usage,
+improving verification, adding features, or improving documentation.
 
-3. Commit your changes:
-
-```bash
-git commit -m "Add amazing feature"
-```
-
-4. Push to the branch:
-
-```bash
-git push origin feature/amazing-feature
-```
-
-5. Open a Pull Request
-
-You can contribute by improving calculation performance, reducing memory usage, improving verification, adding features, or improving documentation.
+</details>
 
 ## FAQ
 
-#### How many digits can PiProject calculate?
+<details>
+<summary><b>❓ How many digits can PiProject calculate?</b></summary>
 
-PiProject has been tested successfully with **10,000,000 digits of π**.
+Tested successfully with **10,000,000 digits of π**.
 
-#### How is π calculated?
+</details>
 
-The project uses the **Chudnovsky algorithm** combined with **binary splitting** and GMPY2 for high-precision arithmetic.
+<details>
+<summary><b>❓ How is π calculated?</b></summary>
 
-#### Is the 10-million-digit result verified?
+The **Chudnovsky algorithm** with **binary splitting** and **GMPY2** arbitrary-precision arithmetic.
+Each series term yields roughly 14 correct digits.
 
-Yes. The calculated result was compared against a reference with **10,000,000 characters**, resulting in **10,000,000 matches and 0 mismatches**.
+</details>
 
-#### Can I modify the project?
+<details>
+<summary><b>❓ Is the 10-million-digit result verified?</b></summary>
 
-Yes. PiProject is open source and can be studied, modified, and improved according to the repository's license.
+Yes. Compared against a reference of 10,000,000 characters —
+**10,000,000 matches, 0 mismatches**.
+
+</details>
+
+<details>
+<summary><b>❓ Can I modify the project?</b></summary>
+
+Yes. PiProject is open source and may be studied, modified, and improved
+according to the repository's license (see below).
+
+</details>
+
+## Roadmap / ideas
+
+- Add more decimal-places benchmarks
+- Parallelize binary splitting across CPU cores
+- Add a web demo / WASM build
+- More digit visualizations like `assets/pi-random-walk.svg`
 
 ## Acknowledgments
 
@@ -183,12 +203,13 @@ Yes. PiProject is open source and can be studied, modified, and improved accordi
 
 ## License
 
-This project is open source.
-
-A license file should be included in the repository to define the permissions for using, modifying, and distributing the code.
+This project is open source. A `LICENSE` file has not yet been added —
+the license terms are pending the repository owner's decision
+(no MIT or other license was selected without authorization).
 
 ---
 
-Made with ❤️ by **[zomop](https://github.com/zomop)**
-
-**September 8, 2026**
+<p align="center">
+  Made with ❤️ by <b>[zomop](https://github.com/zomop)</b> ·
+  September 8, 2026
+</p>
