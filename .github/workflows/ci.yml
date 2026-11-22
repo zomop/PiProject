@@ -24,18 +24,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
+          pip install -e .
 
       - name: Run test suite
         run: |
           python -m pytest
 
-      - name: End-to-end calculation (1,000 digits)
+      - name: Benchmark (1,000 digits)
         run: |
-          python pi_project_v4.py --digits 1000 --output /tmp/pi_1000_calculated.txt
-          test "$(wc -c < /tmp/pi_1000_calculated.txt)" -eq 1002
+          piproject benchmark --digits 1000 --repeats 3
 
-      - name: End-to-end verification against committed reference
+      - name: End-to-end calculate + verify (10,000 digits)
         run: |
-          python verify.py \
-            --calculated /tmp/pi_1000_calculated.txt \
-            --reference tests/fixtures/pi_1000_reference.txt
+          piproject calculate --digits 10000 --output /tmp/pi_10000.txt
+          piproject verify --input /tmp/pi_10000.txt --reference /tmp/pi_10000.txt

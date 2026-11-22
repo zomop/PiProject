@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "piproject"
+version = "2.0.0"
+description = "High-performance π computation and independent verification"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "Proprietary (pending license decision)"}
+authors = [{name = "zomop"}]
+keywords = ["pi", "chudnovsky", "binary-splitting", "gmpy2", "arbitrary-precision"]
+
+dependencies = [
+    "gmpy2>=2.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.0.0",
+]
+
+[project.scripts]
+piproject = "piproject.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+markers = [
+    "slow: marks tests as slow (large digit counts)",
+]
