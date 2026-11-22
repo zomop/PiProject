@@ -6,3 +6,9 @@ env/
 
 *.log
 *.tmp
+
+# Generated pi output (can be tens of MB) — do not commit.
+pi_*.txt
+
+# Downloaded reference file (10 MB) — do not commit.
+reference_pi.txt
