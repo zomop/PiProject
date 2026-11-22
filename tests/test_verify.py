@@ -8,12 +8,14 @@ import pytest
 import piproject.verify as verify_mod
 from piproject import (
     CALCULATED,
+    CALCULATED,
     FULLY_VERIFIED,
     INDEPENDENTLY_VERIFIED,
     PREFIX_VERIFIED,
     STRUCTURE_VALID,
     VERIFICATION_FAILED,
 )
+from piproject.bbp import bbp_vs_decimal
 from piproject.verify import (
     VerificationReport,
     count_digits_in_file,
@@ -222,6 +224,221 @@ def test_verify_pi_with_reference(tmp_path):
     assert report.status == FULLY_VERIFIED
 
 
+# ---------------------------------------------------------------------------
+# Corruption detection (full-file verification)
+# ---------------------------------------------------------------------------
+
+def _make_calc_ref_pair(tmp_path, decimal_digits: str, corrupt_ref: bool = False):
+    """Write a calculated file and matching reference file."""
+    from piproject.compute import calculate_pi
+
+    pi, _ = calculate_pi(len(decimal_digits))
+    calc = tmp_path / "calc.txt"
+    ref = tmp_path / "ref.txt"
+    calc.write_bytes(pi.encode())
+    ref.write_bytes(pi.encode())
+    return calc, ref
+
+
+def test_verify_corrupted_digit_near_beginning(tmp_path):
+    from piproject.compute import calculate_pi
+
+    pi, _ = calculate_pi(100)
+    # Corrupt the 3rd decimal digit (position 3)
+    corrupted = pi[:4] + ("9" if pi[4] != "9" else "8") + pi[5:]
+    calc = tmp_path / "calc.txt"
+    ref = tmp_path / "ref.txt"
+    calc.write_bytes(corrupted.encode())
+    ref.write_bytes(pi.encode())
+
+    report = verify_pi_file(calc, ref)
+    assert report.status == VERIFICATION_FAILED
+    assert report.digits_mismatched > 0
+    assert report.first_mismatch_position is not None
+    assert report.first_mismatch_position < 10
+
+
+def test_verify_corrupted_digit_around_1001(tmp_path):
+    from piproject.compute import calculate_pi
+
+    pi, _ = calculate_pi(2000)
+    # Corrupt a digit around position 1001 in the decimal part.
+    # In the normalized file (dots removed), the integer part "3" occupies
+    # position 0, so decimal index 1001 corresponds to normalized position 1002.
+    idx = 1001  # position in decimal part
+    orig = pi[idx + 2]  # +2 for "3."
+    repl = "9" if orig != "9" else "8"
+    corrupted = pi[: idx + 2] + repl + pi[idx + 3:]
+    calc = tmp_path / "calc.txt"
+    ref = tmp_path / "ref.txt"
+    calc.write_bytes(corrupted.encode())
+    ref.write_bytes(pi.encode())
+
+    report = verify_pi_file(calc, ref)
+    assert report.status == VERIFICATION_FAILED
+    # Normalized position = decimal index + 1 (for the "3" integer part)
+    assert report.first_mismatch_position == idx + 1
+
+
+def test_verify_corrupted_digit_near_end(tmp_path):
+    from piproject.compute import calculate_pi
+
+    pi, _ = calculate_pi(100)
+    # Corrupt the last decimal digit
+    last_idx = len(pi) - 1
+    orig = pi[last_idx]
+    repl = "9" if orig != "9" else "8"
+    corrupted = pi[:last_idx] + repl
+    calc = tmp_path / "calc.txt"
+    ref = tmp_path / "ref.txt"
+    calc.write_bytes(corrupted.encode())
+    ref.write_bytes(pi.encode())
+
+    report = verify_pi_file(calc, ref)
+    assert report.status == VERIFICATION_FAILED
+    assert report.digits_mismatched >= 1
+
+
+def test_verify_missing_digits(tmp_path):
+    from piproject.compute import calculate_pi
+
+    pi, _ = calculate_pi(100)
+    # Truncate the last 10 digits
+    truncated = pi[:-10]
+    calc = tmp_path / "calc.txt"
+    ref = tmp_path / "ref.txt"
+    calc.write_bytes(truncated.encode())
+    ref.write_bytes(pi.encode())
+
+    report = verify_pi_file(calc, ref)
+    assert report.status == VERIFICATION_FAILED
+
+
+def test_verify_extra_digits(tmp_path):
+    from piproject.compute import calculate_pi
+
+    pi, _ = calculate_pi(100)
+    # Append extra digits
+    extended = pi + "12345"
+    calc = tmp_path / "calc.txt"
+    ref = tmp_path / "ref.txt"
+    calc.write_bytes(extended.encode())
+    ref.write_bytes(pi.encode())
+
+    report = verify_pi_file(calc, ref)
+    assert report.status == VERIFICATION_FAILED
+
+
+def test_verify_truncated_file(tmp_path):
+    from piproject.compute import calculate_pi
+
+    pi, _ = calculate_pi(100)
+    # Write only half the file
+    half = pi[: len(pi) // 2]
+    calc = tmp_path / "calc.txt"
+    ref = tmp_path / "ref.txt"
+    calc.write_bytes(half.encode())
+    ref.write_bytes(pi.encode())
+
+    report = verify_pi_file(calc, ref)
+    assert report.status == VERIFICATION_FAILED
+
+
+def test_verify_invalid_characters(tmp_path):
+    from piproject.compute import calculate_pi
+
+    pi, _ = calculate_pi(100)
+    # Insert a letter
+    invalid = pi[:10] + "x" + pi[11:]
+    calc = tmp_path / "calc.txt"
+    ref = tmp_path / "ref.txt"
+    calc.write_bytes(invalid.encode())
+    ref.write_bytes(pi.encode())
+
+    report = verify_pi_file(calc, ref)
+    # normalize_bytes removes dots and whitespace but not letters,
+    # so the letter 'x' will cause a mismatch
+    assert report.status == VERIFICATION_FAILED
+
+
+def test_verify_unexpected_whitespace(tmp_path):
+    from piproject.compute import calculate_pi
+
+    pi, _ = calculate_pi(100)
+    # Insert whitespace in the middle WITHOUT removing a digit
+    with_space = pi[:10] + " \n\t" + pi[10:]
+    calc = tmp_path / "calc.txt"
+    ref = tmp_path / "ref.txt"
+    calc.write_bytes(with_space.encode())
+    ref.write_bytes(pi.encode())
+
+    report = verify_pi_file(calc, ref)
+    # normalize_bytes removes whitespace, so this should still match
+    assert report.status == FULLY_VERIFIED
+
+
+def test_verify_incorrect_decimal_point_placement(tmp_path):
+    from piproject.compute import calculate_pi
+
+    pi, _ = calculate_pi(100)
+    # Move the decimal point
+    wrong_point = pi.replace(".", "", 1) + ".5"
+    calc = tmp_path / "calc.txt"
+    ref = tmp_path / "ref.txt"
+    calc.write_bytes(wrong_point.encode())
+    ref.write_bytes(pi.encode())
+
+    report = verify_pi_file(calc, ref)
+    assert report.status == VERIFICATION_FAILED
+
+
+# ---------------------------------------------------------------------------
+# BBP decimal-to-hex relationship tests
+# ---------------------------------------------------------------------------
+
+def test_bbp_vs_decimal_match():
+    import sys
+
+    sys.set_int_max_str_digits(100000)
+    from piproject.compute import calculate_pi
+
+    pi, _ = calculate_pi(5000)
+    _, _, decimal_digits = pi.partition(".")
+
+    # Decimal precision (5000) supports hex positions up to ~5000/1.21 ≈ 4132
+    results = bbp_vs_decimal(decimal_digits, [1, 10, 100, 120], num_digits=5)
+    for pos, (bbp, dec_hex, match) in results.items():
+        assert match is True, f"Position {pos}: BBP={bbp} dec_hex={dec_hex}"
+
+
+def test_bbp_vs_decimal_insufficient_precision():
+    from piproject.bbp import bbp_vs_decimal
+
+    # Only 10 decimal digits — not enough to resolve hex position 100
+    results = bbp_vs_decimal("1415926535", [100], num_digits=5)
+    bbp, dec_hex, match = results[100]
+    assert match is False
+    assert dec_hex.startswith("ERROR:")
+
+
+def test_decimal_to_hex_at_known_positions():
+    from piproject.bbp import decimal_to_hex_at
+
+    # Known hex digits of pi: 243f6a8885a308d313198a2e03707344...
+    # Use enough decimal digits (computed independently)
+    from piproject.compute import calculate_pi
+
+    pi, _ = calculate_pi(2000)
+    _, _, decimal_digits = pi.partition(".")
+
+    # Position 1: should be "243f6"
+    assert decimal_to_hex_at(decimal_digits, 1, 5) == "243f6"
+    # Position 10: should be "5a308"
+    assert decimal_to_hex_at(decimal_digits, 10, 5) == "5a308"
+    # Position 100: should be "c29b7"
+    assert decimal_to_hex_at(decimal_digits, 100, 5) == "c29b7"
+
+
 def test_verify_pi_report_is_serializable():
     from piproject.compute import calculate_pi
 
@@ -276,14 +493,23 @@ def test_verify_pi_file_missing(tmp_path):
 # ---------------------------------------------------------------------------
 
 def test_verification_report_is_fully_verified():
+    # Only FULLY_VERIFIED means every digit was compared against a reference.
     r = VerificationReport(status=FULLY_VERIFIED)
     assert r.is_fully_verified() is True
 
+    # INDEPENDENTLY_VERIFIED (e.g. BBP spot checks) confirms the algorithm at
+    # sampled positions only and is NOT full verification of the output.
     r = VerificationReport(status=INDEPENDENTLY_VERIFIED)
-    assert r.is_fully_verified() is True
+    assert r.is_fully_verified() is False
 
     r = VerificationReport(status=PREFIX_VERIFIED)
     assert r.is_fully_verified() is False
 
     r = VerificationReport(status=VERIFICATION_FAILED)
+    assert r.is_fully_verified() is False
+
+    r = VerificationReport(status=STRUCTURE_VALID)
+    assert r.is_fully_verified() is False
+
+    r = VerificationReport(status=CALCULATED)
     assert r.is_fully_verified() is False

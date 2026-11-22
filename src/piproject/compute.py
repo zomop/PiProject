@@ -189,18 +189,26 @@ def calculate_pi(
     return pi_string, elapsed
 
 
-def calculate_pi_streaming(
+def calculate_pi_to_file(
     digits: int,
     output: Optional[Path] = None,
     *,
     chunk_size: int = 1024 * 1024,
     guard_digits: int = GUARD_DIGITS,
 ) -> Tuple[str, float]:
-    """Calculate pi and stream the result to an output file.
+    """Calculate pi and write the result to an output file.
 
-    This is a thin wrapper around :func:`calculate_pi` that writes the result
-    to disk in chunks, avoiding holding an additional copy of the full string
-    in memory beyond what the computation already produces.
+    This computes the full result in memory (via :func:`calculate_pi`) and
+    then writes it to disk in chunks. Because the Chudnovsky/binary-splitting
+    engine produces the result as a single large integer at the end of the
+    computation, true digit-by-digit streaming *during* computation is not
+    feasible with this algorithm. The chunked write avoids holding a second
+    copy of the full string in memory beyond what the computation already
+    produces — it is memory-efficient I/O, not true streaming.
+
+    For genuine streaming output (digits produced one at a time), a different
+    algorithm such as a spigot algorithm or BBP-based extraction would be
+    required.
 
     Returns (pi_string, elapsed_seconds).
     """
@@ -214,6 +222,10 @@ def calculate_pi_streaming(
         f.write(pi_string)
 
     return pi_string, elapsed
+
+
+# Keep the old name as a deprecated alias for backward compatibility.
+calculate_pi_streaming = calculate_pi_to_file
 
 
 # ============================================================================

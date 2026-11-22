@@ -27,7 +27,7 @@ from piproject import (
     __version__,
 )
 from piproject.bbp import spot_check_positions
-from piproject.compute import GUARD_DIGITS, calculate_pi, calculate_pi_streaming
+from piproject.compute import GUARD_DIGITS, calculate_pi, calculate_pi_to_file
 from piproject.verify import (
     VerificationReport,
     sha256_file,
@@ -93,7 +93,7 @@ def cmd_calculate(args: argparse.Namespace) -> int:
 
     try:
         if output:
-            pi_string, elapsed = calculate_pi_streaming(
+            pi_string, elapsed = calculate_pi_to_file(
                 digits, output=output
             )
         else:
@@ -202,9 +202,20 @@ def cmd_verify(args: argparse.Namespace) -> int:
 
     if report.details.get("bbp_spot_checks"):
         bbp = report.details["bbp_spot_checks"]
-        print(f"\n  BBP spot checks: {bbp['all_match']}")
-        for pos, r in bbp["results"].items():
+        pure = bbp.get("pure_bbp_vs_reference", {})
+        pure_details = pure.get("details", {})
+        pure_results = pure_details.get("results", {})
+        all_match_pure = all(r["match"] for r in pure_results.values()) if pure_results else False
+        print(f"\n  BBP vs published reference: {'all match' if all_match_pure else 'MISMATCH'}")
+        for pos, r in pure_results.items():
             print(f"    Position {pos}: BBP={r['bbp']} ref={r['reference']} match={r['match']}")
+
+        dec_vs_bbp = bbp.get("bbp_vs_decimal", {})
+        if dec_vs_bbp:
+            all_match_dec = all(r["match"] for r in dec_vs_bbp.values())
+            print(f"  BBP vs decimal-to-hex: {'all match' if all_match_dec else 'MISMATCH'}")
+            for pos, r in dec_vs_bbp.items():
+                print(f"    Position {pos}: BBP={r['bbp']} dec_hex={r['decimal_hex']} match={r['match']}")
 
     if report.is_fully_verified():
         print(f"\nResult: FULLY VERIFIED ✓")

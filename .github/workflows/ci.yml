@@ -30,11 +30,28 @@ jobs:
         run: |
           python -m pytest
 
+      - name: Verify committed reference fixture integrity
+        run: |
+          EXPECTED="823a2e34f63c5d5f30a27733976df5a1ab57feaab505f40d95d3dd3fefa425cc"
+          ACTUAL="$(sha256sum tests/fixtures/pi_1000_reference.txt | awk '{print $1}')"
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "ERROR: Reference fixture SHA-256 mismatch!"
+            echo "  expected: $EXPECTED"
+            echo "  actual:   $ACTUAL"
+            exit 1
+          fi
+          echo "Reference fixture SHA-256 verified: $ACTUAL"
+
+      - name: End-to-end calculate + verify against committed reference
+        run: |
+          piproject calculate --digits 1000 --output /tmp/pi_1000_calculated.txt
+          # Verify the calculated output against the INDEPENDENT committed reference.
+          # This is NOT self-verification: the reference is a separate file with
+          # documented provenance (see tests/fixtures/pi_1000_reference.provenance.json).
+          piproject verify \
+            --input /tmp/pi_1000_calculated.txt \
+            --reference tests/fixtures/pi_1000_reference.txt
+
       - name: Benchmark (1,000 digits)
         run: |
           piproject benchmark --digits 1000 --repeats 3
-
-      - name: End-to-end calculate + verify (10,000 digits)
-        run: |
-          piproject calculate --digits 10000 --output /tmp/pi_10000.txt
-          piproject verify --input /tmp/pi_10000.txt --reference /tmp/pi_10000.txt

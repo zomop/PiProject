@@ -76,7 +76,11 @@ class VerificationReport:
         return json.dumps(self.to_dict(), indent=indent)
 
     def is_fully_verified(self) -> bool:
-        return self.status in (FULLY_VERIFIED, INDEPENDENTLY_VERIFIED)
+        # Only FULLY_VERIFIED means every digit was compared against a
+        # trustworthy reference. INDEPENDENTLY_VERIFIED (e.g. BBP spot checks)
+        # confirms the algorithm at sampled positions only and is NOT full
+        # verification of the output.
+        return self.status == FULLY_VERIFIED
 
 
 # ============================================================================
@@ -362,7 +366,11 @@ def verify_files(
 # BBP independent spot checks
 # ============================================================================
 
-from piproject.bbp import spot_check_positions  # noqa: E402
+from piproject.bbp import (
+    bbp_vs_decimal,
+    decimal_to_hex_at,
+    spot_check_positions,
+)  # noqa: E402
 
 
 def verify_bbp_spot_checks(
@@ -491,16 +499,40 @@ def verify_pi(
         finally:
             tmp_path.unlink(missing_ok=True)
 
-    # Step 4: BBP spot checks (supplemental, independent)
+    # Step 4: BBP spot checks (supplemental, independent).
+    # Two related checks are performed:
+    #   (a) Pure BBP vs published hex reference — confirms the algorithm
+    #       independently of the computation engine.
+    #   (b) BBP vs decimal-to-hex conversion of the calculated output —
+    #       establishes a real relationship between the decimal result and
+    #       independent BBP computation.
+    # Neither changes the main verification status or implies full verification.
     if bbp_positions:
-        bbp_report = verify_bbp_spot_checks(bbp_positions)
-        report.details["bbp_spot_checks"] = bbp_report.to_dict()
-        if bbp_report.status == INDEPENDENTLY_VERIFIED:
-            # BBP confirms the algorithm but doesn't cover all digits;
-            # upgrade PREFIX_VERIFIED -> INDEPENDENTLY_VERIFIED only if
-            # we already have at least prefix verification.
-            if report.status in (PREFIX_VERIFIED, FULLY_VERIFIED):
-                report.status = INDEPENDENTLY_VERIFIED
+        bbp_details = {}
+
+        # (a) Pure BBP vs published reference
+        pure_report = verify_bbp_spot_checks(bbp_positions)
+        bbp_details["pure_bbp_vs_reference"] = pure_report.to_dict()
+
+        # (b) BBP vs decimal-to-hex of the calculated output
+        _, _, decimal_part = pi_string.partition(".")
+        try:
+            decimal_vs_bbp = bbp_vs_decimal(decimal_part, bbp_positions)
+            bbp_details["bbp_vs_decimal"] = {
+                str(pos): {
+                    "bbp": bbp,
+                    "decimal_hex": dec_hex,
+                    "match": match,
+                }
+                for pos, (bbp, dec_hex, match) in decimal_vs_bbp.items()
+            }
+            bbp_details["decimal_to_bbp_all_match"] = all(
+                m for _, _, m in decimal_vs_bbp.values()
+            )
+        except ValueError as exc:
+            bbp_details["decimal_to_bbp_error"] = str(exc)
+
+        report.details["bbp_spot_checks"] = bbp_details
 
     report.verification_time = time.perf_counter() - start
     return report
@@ -556,10 +588,37 @@ def verify_pi_file(
     else:
         report.status = VERIFICATION_FAILED
 
-    # Optional BBP spot checks
+    # Optional BBP spot checks (supplemental, independent).
+    # BBP never changes the main verification status or implies full verification.
     if bbp_positions:
-        bbp_report = verify_bbp_spot_checks(bbp_positions)
-        report.details["bbp_spot_checks"] = bbp_report.to_dict()
+        bbp_details = {}
+
+        # (a) Pure BBP vs published reference
+        pure_report = verify_bbp_spot_checks(bbp_positions)
+        bbp_details["pure_bbp_vs_reference"] = pure_report.to_dict()
+
+        # (b) BBP vs decimal-to-hex of the calculated output
+        try:
+            decimal_digits = read_decimal_digits(calculated_path)
+            # Strip integer part "3" if present
+            if decimal_digits.startswith("3"):
+                decimal_digits = decimal_digits[1:]
+            decimal_vs_bbp = bbp_vs_decimal(decimal_digits, bbp_positions)
+            bbp_details["bbp_vs_decimal"] = {
+                str(pos): {
+                    "bbp": bbp,
+                    "decimal_hex": dec_hex,
+                    "match": match,
+                }
+                for pos, (bbp, dec_hex, match) in decimal_vs_bbp.items()
+            }
+            bbp_details["decimal_to_bbp_all_match"] = all(
+                m for _, _, m in decimal_vs_bbp.values()
+            )
+        except (ValueError, OSError) as exc:
+            bbp_details["decimal_to_bbp_error"] = str(exc)
+
+        report.details["bbp_spot_checks"] = bbp_details
 
     report.verification_time = time.perf_counter() - start
     return report

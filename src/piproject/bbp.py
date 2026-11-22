@@ -8,10 +8,16 @@ positions without computing preceding digits:
 
 This module is used for *spot checks* — verifying individual hexadecimal
 positions — not for full digit-range verification.
+
+It also provides decimal-to-hexadecimal conversion so that BBP spot checks can
+be validated *against* a calculated decimal output, establishing a real
+relationship between the two representations rather than comparing BBP against
+a hardcoded string alone.
 """
 
 from __future__ import annotations
 
+import sys
 from typing import Tuple
 
 # Known hexadecimal digits of pi (after the point), from published sources.
@@ -20,6 +26,120 @@ KNOWN_HEX = (
     "243f6a8885a308d313198a2e03707344a4093822299f31d0082efa98ec4e6c89"
     "452821e638d01377be5466cf34e90c6cc0ac29b7c97c50dd3f84d5b5b5470917"
 )
+
+# log10(16) ≈ 1.20412 — decimal digits needed per hex digit position.
+_DECIMALS_PER_HEX_POSITION = 1.21
+
+
+def _ensure_int_str_digits(needed: int) -> None:
+    """Raise if Python's int<->str digit limit is too low for `needed` digits."""
+    limit = sys.get_int_max_str_digits()
+    if needed > limit:
+        raise ValueError(
+            f"Need {needed:,} digits but int<->str limit is {limit:,}. "
+            "Call sys.set_int_max_str_digits() with a higher value first."
+        )
+
+
+def decimal_to_hex_at(
+    decimal_digits: str,
+    position: int,
+    num_digits: int = 1,
+) -> str:
+    """Convert decimal digits of pi to hexadecimal digits at a given position.
+
+    Given `decimal_digits` (the fractional digits of pi as a string), returns
+    `num_digits` hexadecimal digits starting at 1-indexed `position` after the
+    hexadecimal point.
+
+    Mathematically: if `value = floor(pi * 10^D)` where D = len(decimal_digits),
+    then the hex digits at positions `position`..`position+num_digits-1` are
+    approximately `floor(16^(position+num_digits-1) * value / 10^D) mod 16^num_digits`.
+
+    This is accurate only when D > position * log10(16) ≈ position * 1.204,
+    i.e. when enough decimal digits are available to resolve the requested hex
+    position. A ValueError is raised if the precision is insufficient.
+
+    Parameters
+    ----------
+    decimal_digits:
+        Fractional decimal digits of pi (no "3.", no decimal point).
+    position:
+        1-indexed hexadecimal position after the point. Position 1 is the
+        first hex digit after the point.
+    num_digits:
+        Number of hex digits to extract.
+
+    Returns
+    -------
+    A lowercase hexadecimal string of length `num_digits`.
+
+    Raises
+    ------
+    ValueError
+        If the input is invalid or the decimal precision is insufficient for
+        the requested position.
+    """
+
+    if not decimal_digits or not decimal_digits.isdigit():
+        raise ValueError("decimal_digits must be a non-empty string of digits")
+
+    if position < 1:
+        raise ValueError("position must be >= 1")
+
+    if num_digits < 1:
+        raise ValueError("num_digits must be >= 1")
+
+    num_decimals = len(decimal_digits)
+
+    # Precision requirement: D > position * log10(16) to resolve position.
+    needed_decimals = int(position * _DECIMALS_PER_HEX_POSITION) + num_digits + 2
+    if num_decimals < needed_decimals:
+        raise ValueError(
+            f"Insufficient decimal precision: need > {needed_decimals:,} "
+            f"decimal digits to resolve hex position {position}, "
+            f"but only {num_decimals:,} available."
+        )
+
+    _ensure_int_str_digits(num_decimals + 4 * (position + num_digits - 1))
+
+    # value = floor(pi * 10^num_decimals) = int("3" + decimal_digits)
+    value = int("3" + decimal_digits)
+    pow10 = 10 ** num_decimals
+
+    # floor(16^(position+num_digits-1) * value / 10^num_decimals)
+    # gives hex digits covering positions 1..position+num_digits-1.
+    scaled = value << (4 * (position + num_digits - 1))  # * 16^(position+num_digits-1)
+    combined = scaled // pow10
+
+    # Extract just the requested window: positions position..position+num_digits-1
+    window = combined % (16 ** num_digits)
+    return format(window, f"0{num_digits}x")
+
+
+def bbp_vs_decimal(
+    decimal_digits: str,
+    positions: list[int],
+    num_digits: int = 5,
+) -> dict[int, Tuple[str, str, bool]]:
+    """Compare BBP hex digits against decimal-to-hex conversion.
+
+    This establishes a real relationship between a calculated decimal output
+    and independent BBP computation: if the decimal digits are correct, their
+    hexadecimal conversion must match BBP at the same positions.
+
+    Returns a dict mapping position -> (bbp, decimal_hex, match).
+    """
+    results: dict[int, Tuple[str, str, bool]] = {}
+    for pos in positions:
+        bbp = bbp_hex_digits(pos, num_digits)
+        try:
+            dec_hex = decimal_to_hex_at(decimal_digits, pos, num_digits)
+        except ValueError as exc:
+            dec_hex = f"ERROR: {exc}"
+        match = bbp == dec_hex if not dec_hex.startswith("ERROR") else False
+        results[pos] = (bbp, dec_hex, match)
+    return results
 
 
 def mod_pow16(exp: int, mod: int) -> int:
