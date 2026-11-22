@@ -49,13 +49,13 @@ over the Chudnovsky series — each term yields roughly **14 correct digits**.
 
 ```mermaid
 flowchart TD
-    A[Input: digit count] --> B[Chudnovsky binary splitting]
-    B --> C[Compute P, Q, T integers]
-    C --> D[Integer square root of 10005]
-    D --> E[Assemble pi = 426880·sqrt(10005)·Q / T]
-    E --> F[Format digits & guard-digit trim]
-    F --> G[Verify against known pi digits]
-    G --> H[Save pi_N.txt]
+    A["Input: digit count"] --> B["Chudnovsky binary splitting"]
+    B --> C["Compute P, Q, T integers"]
+    C --> D["Integer square root of 10005"]
+    D --> E["Assemble pi = 426880 * sqrt(10005) * Q / T"]
+    E --> F["Format digits and guard-digit trim"]
+    F --> G["Verify against known pi digits"]
+    G --> H["Save pi_N.txt"]
     style A fill:#e2e8f0,stroke:#334155
     style H fill:#10b981,stroke:#047857,color:#fff
 ```
